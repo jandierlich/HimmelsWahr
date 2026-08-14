@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F2EEE5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Datenschutz – HimmelsWahr</title>
+<link rel="stylesheet" href="hw-style.css">
+</head>
+<body>
+<div class="hw-wrap hw-legal">
+  <div class="hw-header"><h1>Datenschutzerklärung</h1></div>
+  <div class="hw-card">
+
+    <h2>1. Verantwortlicher</h2>
+    <p>Jan Dierlich, Steenacker 33, 25499 Tangstedt, Deutschland, jandierlich@googlemail.com.</p>
+
+    <h2>2. Grundprinzip</h2>
+    <p>HimmelsWahr verarbeitet so wenig Daten wie möglich. Es gibt keine Registrierung, kein Nutzerkonto, kein Tracking, keine Analyse-Tools und keine Werbung.</p>
+
+    <h2>3. Standort</h2>
+    <p>Für die Funktionen „Aktuelle Lage“, „Umweltbelastung“ und „Abendrot-Vorschau“ fragt die App mit deiner Erlaubnis deinen ungefähren Standort ab, um passende Wetter- bzw. Umweltdaten zu laden. Der Standort wird dafür an Open-Meteo.com übermittelt (siehe Punkt 5).</p>
+    <p>Damit du nicht bei jedem Öffnen erneut auf „Standort verwenden“ tippen musst, merkt sich die App deinen letzten bekannten Standort lokal im Speicher des Browsers (localStorage) und lädt die genannten Funktionen beim nächsten Öffnen automatisch. Solange eine dieser Seiten geöffnet bleibt, aktualisiert die App die Werte zusätzlich automatisch alle 10 Minuten im Hintergrund, um sie aktuell zu halten. Dieser gespeicherte Standort verlässt dein Gerät nicht von sich aus – er wird nur erneut verwendet, um bei Bedarf aktuelle Daten bei Open-Meteo abzufragen. Du kannst diesen gespeicherten Wert jederzeit über das Löschen der Website-/App-Daten entfernen.</p>
+    <p>Alternativ kannst du über die Standort-Auswahl (📍-Symbol) einen beliebigen anderen Ort manuell auswählen, statt deinen tatsächlichen Standort zu nutzen. Der dabei eingegebene Suchtext wird an die Geocoding-Schnittstelle von Open-Meteo übermittelt, um passende Orte samt Koordinaten zu finden; deine eigene Position wird dabei nicht übertragen. Der gewählte Ort (Name und Koordinaten) wird ebenfalls lokal auf deinem Gerät gespeichert, bis du zurück auf „Automatisch“ wechselst oder einen anderen Ort wählst.</p>
+
+    <h2>4. Lokal gespeicherte Daten (localStorage)</h2>
+    <ul>
+      <li>Ob die Einführung bereits gesehen wurde</li>
+      <li>Der letzte bekannte automatische Standort (Koordinaten), um wiederholte Standortabfragen zu vermeiden</li>
+      <li>Ein manuell gewählter Ort (Name und Koordinaten) sowie ob gerade der automatische oder ein manuell gewählter Standort aktiv ist</li>
+    </ul>
+    <p>Diese Daten bleiben lokal auf deinem Gerät und werden nirgendwohin hochgeladen. Ein vollständiges Zurücksetzen ist über das Löschen der Website-/App-Daten in den iOS-Einstellungen möglich.</p>
+
+    <h2>5. Externe Wetterdaten und Ortssuche (Open-Meteo)</h2>
+    <p>Wetter-, Sonnenuntergangs- und Luftqualitätsdaten bezieht die App live von den Schnittstellen von Open-Meteo.com (Wetter-API und separate Air-Quality-API). Für die manuelle Ortsauswahl wird zusätzlich die Geocoding-API von Open-Meteo genutzt, die deinen eingegebenen Suchtext zu Koordinaten auflöst. Bei allen drei Schnittstellen werden technisch notwendig Koordinaten bzw. Suchtext sowie deine IP-Adresse an Open-Meteo übertragen. Open-Meteo verarbeitet diese Daten als eigenständiger Verantwortlicher; für Details verweisen wir auf die Datenschutzhinweise von Open-Meteo.com. Die Daten selbst stehen unter der Lizenz CC BY 4.0, weshalb an jeder Anzeigestelle ein Quellenhinweis mit Link erscheint.</p>
+
+    <h2>6. Kein Einsatz von Cookies, Fonts oder Drittanbieter-Skripten</h2>
+    <p>Die App verwendet ausschließlich Systemschriften und lädt keine Schriftarten, Analyse- oder Werbeskripte von Drittanbietern nach. Es werden keine Cookies gesetzt.</p>
+
+    <h2>7. Offline-Funktion</h2>
+    <p>Ein Service Worker speichert die Grundstruktur der App für die Offline-Nutzung zwischen. Live-Wetterdaten werden davon ausdrücklich ausgenommen und immer aktuell nachgeladen, sobald eine Internetverbindung besteht.</p>
+
+    <h2>8. Deine Rechte</h2>
+    <p>Da keine personenbezogenen Daten dauerhaft auf einem Server gespeichert werden, betreffen deine Rechte auf Auskunft, Berichtigung und Löschung im Wesentlichen die bei der Wetterabfrage kurzzeitig an Open-Meteo übermittelte IP-Adresse; wende dich dafür an Open-Meteo.com. Dir steht außerdem ein Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu, für den Verantwortlichen zuständig ist das Unabhängige Landeszentrum für Datenschutz Schleswig-Holstein (ULD).</p>
+
+    <h2>9. Änderungen</h2>
+    <p>Diese Datenschutzerklärung wird bei funktionalen Änderungen der App entsprechend angepasst.</p>
+  </div>
+  <a class="hw-btn" href="hw-index.html">Zur Startseite</a>
+</div>
+<script src="hw-app.js"></script>
+</body>
+</html>

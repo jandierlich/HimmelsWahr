@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F2EEE5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HimmelsWahr">
+<title>HimmelsWahr</title>
+<link rel="manifest" href="hw-manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="hw-icon-180.png">
+<link rel="stylesheet" href="hw-style.css">
+</head>
+<body>
+<div class="hw-wrap">
+
+  <div class="hw-header">
+    <img src="hw-icon-192.png" alt="HimmelsWahr Logo">
+    <p class="hw-eyebrow">Himmel · Wetter · Vorhersage</p>
+    <h1>HimmelsWahr</h1>
+    <p class="hw-sub">Wetter, Umweltbelastung und Abendrot-Vorschau für deinen Standort</p>
+  </div>
+
+  <div id="hw-sky-hero-wrap" style="display:none;">
+    <div id="hw-sky-hero"></div>
+  </div>
+
+  <div class="hw-card" id="hw-lage-card">
+    <h2>Aktuelle Lage</h2>
+    <p class="hw-loc-current" id="hw-active-loc-label"></p>
+    <div id="hw-lage-skeleton" style="display:none;">
+      <div class="hw-skeleton w40"></div>
+      <div class="hw-skeleton w80"></div>
+      <div class="hw-skeleton w60"></div>
+    </div>
+    <p id="hw-lage-status">Standort wird benötigt, um aktuelle Wetterdaten zu laden.</p>
+    <button class="hw-btn primary" id="hw-lage-btn" onclick="hwLoadLage()">Standort verwenden</button>
+    <div id="hw-lage-result" style="display:none;">
+      <div class="hw-row"><span>Wetterlage</span><span id="hw-r-code">–</span></div>
+      <div class="hw-row"><span>Bewölkung</span><span id="hw-r-cloud">–</span></div>
+      <div class="hw-row"><span>Regenwahrscheinlichkeit</span><span id="hw-r-precip">–</span></div>
+      <div class="hw-row"><span>Wind</span><span id="hw-r-wind">–</span></div>
+      <div id="hw-r-precip-chart"></div>
+      <p style="font-size:12px;color:var(--text-secondary);text-align:center;margin:2px 0 0;">Regenwahrscheinlichkeit, nächste Stunden</p>
+      <div style="display:flex;justify-content:center;gap:22px;margin-top:14px;">
+        <div id="hw-r-score-ring"></div>
+        <div id="hw-r-uv-ring"></div>
+      </div>
+      <p id="hw-r-updated" style="font-size:12px;color:var(--text-secondary);text-align:center;margin-top:10px;"></p>
+      <p class="hw-attrib">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>
+    </div>
+  </div>
+
+  <div class="hw-card" id="hw-hourly-card" style="display:none;">
+    <h2>Stündlicher Verlauf</h2>
+    <div class="hw-hourly-scroll" id="hw-hourly-scroll"></div>
+    <p class="hw-attrib">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>
+  </div>
+
+  <div class="hw-card" id="hw-forecast-card" style="display:none;">
+    <h2>Vorhersage</h2>
+    <p style="font-size:12px;color:var(--text-secondary);margin-top:-6px;">Die nächsten 6 Tage</p>
+    <div id="hw-forecast-list"></div>
+    <p class="hw-attrib">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>
+  </div>
+
+  <div class="hw-card" id="hw-details-card" style="display:none;">
+    <h2>Weitere Details</h2>
+    <div class="hw-stat-grid" id="hw-stat-grid"></div>
+    <p class="hw-attrib" style="margin-top:12px;">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>
+  </div>
+
+  <a class="hw-btn primary" href="hw-umwelt.html">🍃 Umweltbelastung an meinem Standort</a>
+  <a class="hw-btn" href="hw-abendrot.html">🌇 Abendrot-Vorschau</a>
+
+  <div class="hw-footer">
+    <a href="hw-info.html">Einführung</a>·<a href="hw-impressum.html">Impressum</a>·<a href="hw-datenschutz.html">Datenschutz</a>
+  </div>
+</div>
+
+<div class="hw-pill-nav">
+  <button onclick="hwOpenLocationPicker()" aria-label="Standort wählen">📍</button>
+  <button onclick="hwToggleTheme()" aria-label="Hell/Dunkel umschalten">🌓</button>
+</div>
+
+<script src="hw-app.js"></script>
+<script>
+if(!localStorage.getItem('hw-intro-seen')){
+  localStorage.setItem('hw-intro-seen', '1');
+  location.replace('hw-info.html');
+}
+
+function hwLoadLage(){
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  document.getElementById('hw-lage-btn').style.display = 'none';
+  document.getElementById('hw-lage-status').style.display = 'none';
+  document.getElementById('hw-lage-skeleton').style.display = 'block';
+  hwGetActiveLocation().then(function(pos){
+    return hwFetchWeather(pos.lat, pos.lon);
+  }).then(function(data){
+    var c = data.current;
+
+    document.getElementById('hw-sky-hero-wrap').style.display = 'block';
+    hwRenderSkyHero('hw-sky-hero', c.weather_code, c.is_day === 1, c.temperature_2m, hwWeatherCodeText(c.weather_code));
+
+    document.getElementById('hw-r-code').innerHTML =
+      '<span style="vertical-align:middle;margin-right:6px;color:'+hwWeatherIconColor(c.weather_code, c.is_day===1)+';">'+hwWeatherIcon(c.weather_code,20,c.is_day===1)+'</span>' + hwWeatherCodeText(c.weather_code);
+    document.getElementById('hw-r-cloud').textContent = c.cloud_cover + ' %';
+    document.getElementById('hw-r-precip').textContent = (c.precipitation_probability != null ? c.precipitation_probability + ' %' : '–');
+    document.getElementById('hw-r-wind').textContent = c.wind_speed_10m + ' km/h';
+    hwRenderPrecipChart('hw-r-precip-chart', data, 5);
+
+    var s = hwCalcScore(c.temperature_2m, c.precipitation_probability || 0, c.wind_speed_10m);
+    var scoreColor = s.stufe === 'gruen' ? 'var(--green-dot)' : (s.stufe === 'gelb' ? 'var(--yellow-dot)' : 'var(--red-dot)');
+    hwRenderRing('hw-r-score-ring', s.score, 100, scoreColor, 'Draußen-Score', s.score);
+
+    var uv = c.uv_index != null ? c.uv_index : 0;
+    var uvColor = uv <= 2 ? 'var(--green-dot)' : (uv <= 5 ? 'var(--yellow-dot)' : 'var(--red-dot)');
+    hwRenderRing('hw-r-uv-ring', uv, 11, uvColor, 'UV-Index', uv);
+
+    document.getElementById('hw-r-updated').textContent = '🔄 Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+    document.getElementById('hw-lage-skeleton').style.display = 'none';
+    document.getElementById('hw-lage-result').style.display = 'block';
+
+    hwRenderHourlyStrip('hw-hourly-scroll', data, 16);
+    document.getElementById('hw-hourly-card').style.display = 'block';
+
+    hwRenderForecast('hw-forecast-list', data);
+    document.getElementById('hw-forecast-card').style.display = 'block';
+
+    hwRenderDetailTiles(data);
+    document.getElementById('hw-details-card').style.display = 'block';
+  }).catch(function(err){
+    document.getElementById('hw-lage-skeleton').style.display = 'none';
+    document.getElementById('hw-lage-status').style.display = 'block';
+    document.getElementById('hw-lage-status').textContent = 'Standort/Wetterdaten nicht verfügbar: ' + (err.message || 'Zugriff verweigert');
+    document.getElementById('hw-lage-btn').style.display = 'block';
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  window.hwPageReload = hwLoadLage;
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  if(hwHasActiveLocationReady()) hwLoadLage();
+  /* "Widget-Gefühl": Werte automatisch alle 10 Minuten auffrischen, solange die Seite geöffnet ist */
+  setInterval(function(){
+    if(hwHasActiveLocationReady()) hwLoadLage();
+  }, 600000);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+HimmelsWahr — Lizenzübersicht
+
+Eigener Code (HTML/CSS/JavaScript, Icons):
+Copyright Jan Dierlich. Alle Rechte vorbehalten, private Nutzung/Weitergabe an Freunde und Kollegen ausdrücklich erlaubt.
+
+Verwendete externe Bibliotheken: KEINE.
+HimmelsWahr nutzt bewusst keine externen JavaScript-Bibliotheken, keine CDN-Ressourcen und keine Web-Fonts. Es kommen ausschließlich native Browser-Schnittstellen zum Einsatz (Standort via Geolocation API, localStorage, Service Worker). Dadurch entfallen Lizenzfragen zu Drittkomponenten vollständig.
+
+Externe Datenquellen zur Laufzeit:
+- Open-Meteo.com — Wetter- und Sonnenuntergangsdaten (Forecast API)
+- Open-Meteo.com — Luftqualitätsdaten (separate Air-Quality-API, Modellbasis CAMS/Copernicus)
+- Open-Meteo.com — Ortssuche für die manuelle Standortauswahl (separate Geocoding-API, GeoNames-Datenbasis)
+  Lizenz der Daten (alle drei APIs): Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://open-meteo.com/en/license
+  Nutzung: nicht-kommerziell, kostenlos, Attributionslink an jeder Anzeigestelle vorhanden.
+  Es wird ausschließlich die öffentliche, unauthentifizierte API verwendet (kein API-Key, kein kostenpflichtiger Plan).
+
+Bewusst NICHT eingebunden / entfernt:
+- Himmel-Live-Scan (Kamerafunktion): Feature auf Wunsch komplett wieder entfernt.
+- OpenSky Network API (Live-Flugdaten): Die Nutzungsbedingungen von OpenSky Network verlangen für den Betrieb der REST-API in einem laufenden Produkt/Dienst eine vorherige schriftliche Lizenz, unabhängig vom nicht-kommerziellen Zweck.
+- Amtliche DWD-Wetterwarnungen: Feature auf Wunsch komplett wieder entfernt.
+- Bundesamt für Strahlenschutz (BfS) — Gamma-Ortsdosisleistung (Radioaktivität): War kurzzeitig eingebunden, auf Wunsch wieder entfernt. Grund: Die exakte Lizenz des konkreten Datensatzes steht laut BfS "in den beschreibenden Metadaten des jeweiligen Datensatzes", diese Seite war per robots.txt für automatisierte Abfrage gesperrt und konnte nicht abschließend eingesehen/zitiert werden – anders als bei Open-Meteo (klar benannte CC-BY-4.0-Lizenz) blieb hier ein Rest Unsicherheit ohne 100%ige Bestätigung.

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F2EEE5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Abendrot-Vorschau – HimmelsWahr</title>
+<link rel="manifest" href="hw-manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="hw-icon-180.png">
+<link rel="stylesheet" href="hw-style.css">
+</head>
+<body>
+<div class="hw-wrap">
+  <div class="hw-header">
+    <p class="hw-eyebrow">Vorhersage</p>
+    <h1>Abendrot-Vorschau</h1>
+    <p class="hw-sub">Schätzung, wie gut die Chancen auf ein farbenkräftiges Abendrot heute stehen.</p>
+  </div>
+
+  <div class="hw-card" id="hw-card-status">
+    <p class="hw-loc-current" id="hw-active-loc-label"></p>
+    <p id="hw-status">Standort wird benötigt.</p>
+    <button class="hw-btn primary" onclick="hwLoadAbendrot()">Standort verwenden</button>
+  </div>
+
+  <div class="hw-card" id="hw-card-result" style="display:none;">
+    <h2>Sonnenuntergang</h2>
+    <div class="hw-row"><span>Uhrzeit</span><span id="hw-sunset-time">–</span></div>
+    <div class="hw-row"><span>Countdown</span><span id="hw-countdown">–</span></div>
+    <div id="hw-sun-arc" style="margin-top:12px;"></div>
+    <div style="margin-top:14px;text-align:center;" id="hw-ampel-box"></div>
+    <p id="hw-erklaerung" style="margin-top:10px;"></p>
+    <p style="font-size:12px;color:var(--text-secondary);">Automatisierte Schätzung aus Wolkendaten, keine Garantie – lokale Sichtbedingungen können abweichen.</p>
+    <h3 style="margin-top:14px;">Bewölkung zum Sonnenuntergang</h3>
+    <div class="hw-row"><span>Tief (blockiert Sicht)</span><span id="hw-cloud-low">–</span></div>
+    <div class="hw-row"><span>Mittel</span><span id="hw-cloud-mid">–</span></div>
+    <div class="hw-row"><span>Hoch (reflektiert Farbe)</span><span id="hw-cloud-high">–</span></div>
+    <p id="hw-abendrot-updated" style="font-size:12px;color:var(--text-secondary);text-align:center;margin-top:8px;"></p>
+    <p class="hw-attrib">Wetterdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>
+  </div>
+
+  <a class="hw-btn" href="hw-index.html">Zur Startseite</a>
+
+  <div class="hw-footer">
+    <a href="hw-info.html">Einführung</a>·<a href="hw-impressum.html">Impressum</a>·<a href="hw-datenschutz.html">Datenschutz</a>
+  </div>
+</div>
+
+<div class="hw-pill-nav">
+  <a href="hw-index.html" aria-label="Start">🏠</a>
+  <button onclick="hwOpenLocationPicker()" aria-label="Standort wählen">📍</button>
+  <button onclick="hwToggleTheme()" aria-label="Hell/Dunkel umschalten">🌓</button>
+</div>
+
+<script src="hw-app.js"></script>
+<script>
+var hwSunsetTs = null, hwCountdownTimer = null;
+
+function hwLoadAbendrot(){
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  document.getElementById('hw-status').textContent = 'Standort wird ermittelt …';
+  hwGetActiveLocation().then(function(pos){
+    return hwFetchWeather(pos.lat, pos.lon);
+  }).then(function(data){
+    var sunsetStr = data.daily.sunset[0];
+    var sunriseStr = data.daily.sunrise[0];
+    var sunset = new Date(sunsetStr);
+    hwSunsetTs = sunset.getTime();
+    hwRenderSunArc('hw-sun-arc', sunriseStr, sunsetStr);
+
+    var hourlyTimes = data.hourly.time;
+    var idx = 0, best = Infinity;
+    for(var i=0;i<hourlyTimes.length;i++){
+      var diff = Math.abs(new Date(hourlyTimes[i]).getTime() - hwSunsetTs);
+      if(diff < best){ best = diff; idx = i; }
+    }
+    var low = data.hourly.cloud_cover_low[idx];
+    var mid = data.hourly.cloud_cover_mid[idx];
+    var high = data.hourly.cloud_cover_high[idx];
+
+    document.getElementById('hw-sunset-time').textContent = sunset.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('hw-cloud-low').textContent = low + ' %';
+    document.getElementById('hw-cloud-mid').textContent = mid + ' %';
+    document.getElementById('hw-cloud-high').textContent = high + ' %';
+
+    var stufe, label, erklaerung;
+    if(low > 75){
+      stufe='rot'; label='Geringe Chance';
+      erklaerung = 'Sehr viele tiefe Wolken verdecken wahrscheinlich den Horizont – das Abendlicht kommt kaum durch.';
+    } else if(high >= 15 && high <= 65 && low < 45){
+      stufe='gruen'; label='Gute Chance auf Abendrot';
+      erklaerung = 'Ein lockerer Schleier aus hohen Wolken bei freiem Horizont ist die klassische Zutat für kräftiges Abendrot – die hohen Wolken reflektieren das rote Licht der tief stehenden Sonne.';
+    } else if(low < 45 && high < 15 && mid < 30){
+      stufe='gelb'; label='Möglich, aber eher dezent';
+      erklaerung = 'Weitgehend klarer Himmel – der Sonnenuntergang ist gut sichtbar, aber ohne Wolken zum Anstrahlen bleibt die Farbwirkung meist zurückhaltend.';
+    } else {
+      stufe='gelb'; label='Durchwachsene Chancen';
+      erklaerung = 'Die Wolkenverteilung ist gemischt – es kann klappen, ist aber nicht sicher.';
+    }
+    document.getElementById('hw-ampel-box').innerHTML = '<span class="hw-ampel '+stufe+'">' + (stufe==='gruen'?'🟢':stufe==='gelb'?'🟡':'🔴') + ' ' + label + '</span>';
+    document.getElementById('hw-erklaerung').textContent = erklaerung;
+
+    document.getElementById('hw-card-status').style.display='none';
+    document.getElementById('hw-card-result').style.display='block';
+    document.getElementById('hw-abendrot-updated').textContent = '🔄 Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+    hwStartCountdown();
+  }).catch(function(err){
+    document.getElementById('hw-status').textContent = 'Nicht verfügbar: ' + (err.message || 'Standort/Wetterdienst nicht erreichbar');
+  });
+}
+
+function hwStartCountdown(){
+  if(hwCountdownTimer) clearInterval(hwCountdownTimer);
+  function tick(){
+    var diff = hwSunsetTs - Date.now();
+    var el = document.getElementById('hw-countdown');
+    if(diff <= 0){ el.textContent = 'Sonne ist untergegangen'; clearInterval(hwCountdownTimer); return; }
+    var h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+    el.textContent = h + ' Std ' + m + ' Min';
+  }
+  tick();
+  hwCountdownTimer = setInterval(tick, 30000);
+}
+window.addEventListener('pagehide', function(){ if(hwCountdownTimer) clearInterval(hwCountdownTimer); });
+document.addEventListener('DOMContentLoaded', function(){
+  window.hwPageReload = hwLoadAbendrot;
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  if(hwHasActiveLocationReady()) hwLoadAbendrot();
+  setInterval(function(){
+    if(hwHasActiveLocationReady()) hwLoadAbendrot();
+  }, 600000);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F2EEE5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Umweltbelastung – HimmelsWahr</title>
+<link rel="manifest" href="hw-manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="hw-icon-180.png">
+<link rel="stylesheet" href="hw-style.css">
+</head>
+<body>
+<div class="hw-wrap">
+  <div class="hw-header">
+    <p class="hw-eyebrow">Luftqualität &amp; UV</p>
+    <h1>Umweltbelastung</h1>
+    <p class="hw-sub">Aktuelle Belastung durch Feinstaub, Ozon &amp; Co. an deinem Standort.</p>
+  </div>
+
+  <div class="hw-card" id="hw-card-status">
+    <p class="hw-loc-current" id="hw-active-loc-label"></p>
+    <p id="hw-status">Standort wird benötigt.</p>
+    <button class="hw-btn primary" onclick="hwLoadUmwelt()">Standort verwenden</button>
+  </div>
+
+  <div class="hw-card" id="hw-card-result" style="display:none;">
+    <h2>Europäischer Luftqualitätsindex</h2>
+    <div style="text-align:center;margin-bottom:10px;" id="hw-ampel-box"></div>
+    <p id="hw-erklaerung"></p>
+    <p style="font-size:12px;color:var(--text-secondary);">Automatisierte Schätzung aus Modelldaten, keine amtliche Messung an deinem genauen Standort.</p>
+    <div class="hw-row"><span>Feinstaub PM2,5</span><span id="hw-pm25">–</span></div>
+    <div class="hw-row"><span>Feinstaub PM10</span><span id="hw-pm10">–</span></div>
+    <div class="hw-row"><span>Ozon (O₃)</span><span id="hw-ozone">–</span></div>
+    <div class="hw-row"><span>Stickstoffdioxid (NO₂)</span><span id="hw-no2">–</span></div>
+    <div class="hw-row"><span>UV-Index</span><span id="hw-uv">–</span></div>
+    <p id="hw-umwelt-updated" style="font-size:12px;color:var(--text-secondary);text-align:center;margin-top:8px;"></p>
+    <p class="hw-attrib">Luftqualitätsdaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0), Modellbasis CAMS (Copernicus)</p>
+  </div>
+
+  <div class="hw-card" id="hw-card-pollen" style="display:none;">
+    <h2>Pollenbelastung</h2>
+    <div id="hw-pollen-ampel" style="text-align:center;margin-bottom:10px;"></div>
+    <div class="hw-row"><span>Erle</span><span id="hw-pollen-alder">–</span></div>
+    <div class="hw-row"><span>Birke</span><span id="hw-pollen-birch">–</span></div>
+    <div class="hw-row"><span>Gräser</span><span id="hw-pollen-grass">–</span></div>
+    <div class="hw-row"><span>Beifuß</span><span id="hw-pollen-mugwort">–</span></div>
+    <div class="hw-row"><span>Olive</span><span id="hw-pollen-olive">–</span></div>
+    <div class="hw-row"><span>Ambrosia (Ragweed)</span><span id="hw-pollen-ragweed">–</span></div>
+    <p style="margin-top:8px;">Angaben in Pollen/m³. Außerhalb der jeweiligen Saison zeigen einzelne Pollenarten „–“ (keine Daten) statt 0 an. Pollendaten deckt nur den europäischen Raum ab.</p>
+    <p class="hw-attrib">Pollendaten von <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0), Modellbasis CAMS (Copernicus)</p>
+  </div>
+
+  <div class="hw-card">
+    <h3>Was bedeutet der Index?</h3>
+    <div class="hw-row"><span>🟢 0–40</span><span>Gut / mäßig</span></div>
+    <div class="hw-row"><span>🟡 41–80</span><span>Mäßig bis schlecht</span></div>
+    <div class="hw-row"><span>🔴 &gt;80</span><span>Sehr schlecht</span></div>
+    <p>Der europäische Luftqualitätsindex (EAQI) fasst die einzelnen Schadstoffwerte zu einer Gesamteinschätzung zusammen – maßgeblich ist jeweils der ungünstigste Einzelwert.</p>
+  </div>
+
+  <a class="hw-btn" href="hw-index.html">Zur Startseite</a>
+
+  <div class="hw-footer">
+    <a href="hw-info.html">Einführung</a>·<a href="hw-impressum.html">Impressum</a>·<a href="hw-datenschutz.html">Datenschutz</a>
+  </div>
+</div>
+
+<div class="hw-pill-nav">
+  <a href="hw-index.html" aria-label="Start">🏠</a>
+  <button onclick="hwOpenLocationPicker()" aria-label="Standort wählen">📍</button>
+  <button onclick="hwToggleTheme()" aria-label="Hell/Dunkel umschalten">🌓</button>
+</div>
+
+<script src="hw-app.js"></script>
+<script>
+function hwLoadUmwelt(){
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  document.getElementById('hw-status').textContent = 'Standort wird ermittelt …';
+  hwGetActiveLocation().then(function(pos){
+    document.getElementById('hw-status').textContent = 'Umweltdaten werden geladen …';
+    return hwFetchAirQuality(pos.lat, pos.lon);
+  }).then(function(data){
+    var c = data.current;
+    var aqi = c.european_aqi;
+    document.getElementById('hw-pm25').textContent = c.pm2_5 + ' µg/m³';
+    document.getElementById('hw-pm10').textContent = c.pm10 + ' µg/m³';
+    document.getElementById('hw-ozone').textContent = c.ozone + ' µg/m³';
+    document.getElementById('hw-no2').textContent = c.nitrogen_dioxide + ' µg/m³';
+    document.getElementById('hw-uv').textContent = (c.uv_index != null ? c.uv_index : '–');
+
+    var stufe, label;
+    if(aqi <= 40){ stufe='gruen'; label='Gute bis mäßige Luftqualität'; }
+    else if(aqi <= 80){ stufe='gelb'; label='Mäßige bis schlechte Luftqualität'; }
+    else { stufe='rot'; label='Sehr schlechte Luftqualität'; }
+
+    document.getElementById('hw-ampel-box').innerHTML = '<span class="hw-ampel '+stufe+'">' + (stufe==='gruen'?'🟢':stufe==='gelb'?'🟡':'🔴') + ' EAQI ' + aqi + ' · ' + label + '</span>';
+
+    var hinweis = 'Werte gelten für die aktuelle Stunde an deinem Standort.';
+    if(c.uv_index >= 6){ hinweis += ' UV-Index ' + c.uv_index + ': Sonnenschutz empfohlen.'; }
+    document.getElementById('hw-erklaerung').textContent = hinweis;
+
+    document.getElementById('hw-card-status').style.display='none';
+    document.getElementById('hw-card-result').style.display='block';
+    document.getElementById('hw-umwelt-updated').textContent = '🔄 Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+
+    var pollenFelder = [
+      ['alder_pollen','hw-pollen-alder'], ['birch_pollen','hw-pollen-birch'],
+      ['grass_pollen','hw-pollen-grass'], ['mugwort_pollen','hw-pollen-mugwort'],
+      ['olive_pollen','hw-pollen-olive'], ['ragweed_pollen','hw-pollen-ragweed']
+    ];
+    var maxPollen = 0, hatPollenDaten = false;
+    pollenFelder.forEach(function(p){
+      var val = c[p[0]];
+      var el = document.getElementById(p[1]);
+      if(val == null){ el.textContent = '–'; }
+      else{ el.textContent = val + ' /m³'; hatPollenDaten = true; if(val > maxPollen) maxPollen = val; }
+    });
+    if(hatPollenDaten){
+      var pStufe, pLabel;
+      if(maxPollen < 20){ pStufe='gruen'; pLabel='Geringe Pollenbelastung'; }
+      else if(maxPollen < 100){ pStufe='gelb'; pLabel='Mäßige bis hohe Pollenbelastung'; }
+      else { pStufe='rot'; pLabel='Sehr hohe Pollenbelastung'; }
+      document.getElementById('hw-pollen-ampel').innerHTML = '<span class="hw-ampel '+pStufe+'">' + (pStufe==='gruen'?'🟢':pStufe==='gelb'?'🟡':'🔴') + ' ' + pLabel + '</span>';
+      document.getElementById('hw-card-pollen').style.display = 'block';
+    } else {
+      document.getElementById('hw-pollen-ampel').innerHTML = '<span class="hw-ampel gruen">🟢 Aktuell keine Pollenbelastung gemessen</span>';
+      document.getElementById('hw-card-pollen').style.display = 'block';
+    }
+  }).catch(function(err){
+    document.getElementById('hw-status').textContent = 'Nicht verfügbar: ' + (err.message || 'Standort/Dienst nicht erreichbar');
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  window.hwPageReload = hwLoadUmwelt;
+  document.getElementById('hw-active-loc-label').textContent = hwActiveLocationLabel();
+  if(hwHasActiveLocationReady()) hwLoadUmwelt();
+  setInterval(function(){
+    if(hwHasActiveLocationReady()) hwLoadUmwelt();
+  }, 600000);
+});
+</script>
+</body>
+</html>
