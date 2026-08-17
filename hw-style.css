@@ -42,7 +42,7 @@ body{
   padding-bottom:110px;
   touch-action:manipulation;
 }
-.hw-wrap{max-width:520px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 18px 20px;}
+.hw-wrap{max-width:520px;margin:0 auto;padding:calc(6px + env(safe-area-inset-top)) 18px 20px;}
 .hw-header{text-align:center;padding:22px 10px 8px;}
 .hw-header img{width:72px;height:72px;object-fit:contain;margin-bottom:8px;}
 .hw-header h1{font-size:23px;margin:0 0 4px;letter-spacing:.2px;}
