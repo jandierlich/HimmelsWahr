@@ -102,9 +102,9 @@ function hwOpenLocationPicker(){
   if(document.getElementById('hw-loc-overlay')) return;
   var overlay = document.createElement('div');
   overlay.id = 'hw-loc-overlay';
-  overlay.className = 'hw-loc-overlay';
+  overlay.className = 'hw-sheet-overlay hw-loc-overlay';
   overlay.innerHTML =
-    '<div class="hw-loc-modal">' +
+    '<div class="hw-sheet-modal hw-loc-modal">' +
       '<h2 style="margin:0 0 10px;">Standort wählen</h2>' +
       '<button class="hw-btn primary" id="hw-loc-auto-btn" style="margin-bottom:10px;">📍 Automatisch (mein Standort)</button>' +
       '<input type="text" id="hw-loc-search" placeholder="Ort eingeben, z. B. Hamburg" autocomplete="off">' +
@@ -160,6 +160,27 @@ function hwCloseLocationPicker(){
   if(overlay) overlay.remove();
 }
 
+/* ---------- Wiederverwendbares Detail-Sheet (für Vorhersage-Tage und Detail-Kacheln) ---------- */
+function hwOpenSheet(titleHtml, bodyHtml){
+  hwCloseSheet();
+  var overlay = document.createElement('div');
+  overlay.id = 'hw-sheet-overlay';
+  overlay.className = 'hw-sheet-overlay';
+  overlay.innerHTML =
+    '<div class="hw-sheet-modal">' +
+      '<h2 style="margin:0 0 10px;">' + titleHtml + '</h2>' +
+      bodyHtml +
+      '<button class="hw-btn hw-sheet-close" id="hw-sheet-close-btn">Schließen</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('hw-sheet-close-btn').onclick = hwCloseSheet;
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) hwCloseSheet(); });
+}
+function hwCloseSheet(){
+  var overlay = document.getElementById('hw-sheet-overlay');
+  if(overlay) overlay.remove();
+}
+
 /* ---------- Open-Meteo ---------- */
 /* Wetterdaten von Open-Meteo.com — CC BY 4.0, Attribution im UI erforderlich (siehe hw-attrib in jeder Seite) */
 function hwFetchWeather(lat, lon){
@@ -170,7 +191,7 @@ function hwFetchWeather(lat, lon){
     hourly: 'temperature_2m,weather_code,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation_probability,wind_speed_10m,pressure_msl',
     daily: 'sunset,sunrise,weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,uv_index_max,sunshine_duration,daylight_duration,snowfall_sum',
     timezone: 'auto',
-    forecast_days: '7'
+    forecast_days: '6'
   });
   return fetch('https://api.open-meteo.com/v1/forecast?' + params.toString())
     .then(function(r){ if(!r.ok) throw new Error('Wetterdienst nicht erreichbar'); return r.json(); });
@@ -338,31 +359,79 @@ function hwWeekdayShort(dateStr){
 }
 /* Rendert eine ausführliche 6-Tage-Vorschau (ohne den heutigen Tag) aus den bereits geladenen daily-Daten:
    Wochentag+Datum, Icon+Wetterlage-Text, Höchst-/Tiefsttemperatur, Regenwahrscheinlichkeit+Regenmenge, Wind, UV-Index. */
+var hwForecastDataCache = null;
 function hwRenderForecast(containerId, weatherData){
   var el = document.getElementById(containerId);
   if(!el) return;
   var d = weatherData.daily;
   if(!d || !d.time || d.time.length < 2){ el.innerHTML = ''; return; }
+  hwForecastDataCache = weatherData;
   var monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   var cards = [];
-  for(var i = 1; i < d.time.length && i <= 6; i++){
+  for(var i = 1; i < d.time.length && i <= 5; i++){
     var dt = new Date(d.time[i]);
     var dateLabel = dt.getDate() + '. ' + monthNames[dt.getMonth()];
     cards.push(
-      '<div class="hw-forecast-day">' +
+      '<button type="button" class="hw-forecast-day" data-day-idx="' + i + '">' +
         '<div class="hw-forecast-day-head">' +
           '<span class="hw-forecast-weekday">' + hwWeekdayShort(d.time[i]) + ', ' + dateLabel + '</span>' +
-          '<span style="color:' + hwWeatherIconColor(d.weather_code[i]) + ';">' + hwWeatherIcon(d.weather_code[i], 26) + '</span>' +
+          '<span style="display:flex;align-items:center;">' +
+            '<span style="color:' + hwWeatherIconColor(d.weather_code[i]) + ';">' + hwWeatherIcon(d.weather_code[i], 26) + '</span>' +
+            '<span class="hw-forecast-chevron">›</span>' +
+          '</span>' +
         '</div>' +
         '<div class="hw-forecast-desc">' + hwWeatherCodeText(d.weather_code[i]) + '</div>' +
         '<div class="hw-forecast-temps"><strong>' + Math.round(d.temperature_2m_max[i]) + '°</strong> / ' + Math.round(d.temperature_2m_min[i]) + '°</div>' +
         '<div class="hw-row"><span>Regen</span><span>' + d.precipitation_probability_max[i] + ' % · ' + d.precipitation_sum[i].toFixed(1) + ' mm</span></div>' +
-        '<div class="hw-row"><span>Wind</span><span>' + Math.round(d.wind_speed_10m_max[i]) + ' km/h</span></div>' +
-        '<div class="hw-row"><span>UV-Index</span><span>' + Math.round(d.uv_index_max[i]) + '</span></div>' +
-      '</div>'
+        '<div class="hw-row" style="border-bottom:none;"><span>Wind</span><span>' + Math.round(d.wind_speed_10m_max[i]) + ' km/h</span></div>' +
+      '</button>'
     );
   }
   el.innerHTML = cards.join('');
+  el.querySelectorAll('.hw-forecast-day').forEach(function(btn){
+    btn.onclick = function(){ hwOpenForecastDayDetail(parseInt(btn.getAttribute('data-day-idx'), 10)); };
+  });
+}
+
+/* Öffnet das Detail-Sheet für einen Vorhersage-Tag (u. a. UV-Index, Sonnenauf-/-untergang) */
+function hwOpenForecastDayDetail(i){
+  if(!hwForecastDataCache) return;
+  var d = hwForecastDataCache.daily;
+  var monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  var dt = new Date(d.time[i]);
+  var dateLabel = dt.getDate() + '. ' + monthNames[dt.getMonth()];
+  var sunrise = d.sunrise && d.sunrise[i] ? hwFormatTime(d.sunrise[i]) : '–';
+  var sunset = d.sunset && d.sunset[i] ? hwFormatTime(d.sunset[i]) : '–';
+  var uv = d.uv_index_max ? Math.round(d.uv_index_max[i]) : null;
+  var sunshine = d.sunshine_duration && d.sunshine_duration[i] != null ? hwFormatDuration(d.sunshine_duration[i]) : null;
+  var snow = d.snowfall_sum && d.snowfall_sum[i] > 0 ? d.snowfall_sum[i] + ' cm' : null;
+
+  var rows = [
+    ['Höchst- / Tiefstwert', Math.round(d.temperature_2m_max[i]) + '° / ' + Math.round(d.temperature_2m_min[i]) + '°'],
+    ['Regenwahrscheinlichkeit', d.precipitation_probability_max[i] + ' %'],
+    ['Regenmenge', d.precipitation_sum[i].toFixed(1) + ' mm'],
+    ['Wind (max.)', Math.round(d.wind_speed_10m_max[i]) + ' km/h']
+  ];
+  if(uv != null) rows.push(['UV-Index (max.)', uv]);
+  rows.push(['Sonnenaufgang', sunrise]);
+  rows.push(['Sonnenuntergang', sunset]);
+  if(sunshine) rows.push(['Sonnenscheindauer', sunshine]);
+  if(snow) rows.push(['Schneefall', snow]);
+
+  var body = '<p style="color:var(--text-secondary);margin-top:-4px;">' + hwWeatherCodeText(d.weather_code[i]) + '</p>' +
+    rows.map(function(r, idx){
+      var lastStyle = idx === rows.length - 1 ? ' style="border-bottom:none;"' : '';
+      return '<div class="hw-row"' + lastStyle + '><span>' + r[0] + '</span><span>' + r[1] + '</span></div>';
+    }).join('');
+
+  hwOpenSheet(hwWeekdayShort(d.time[i]) + ', ' + dateLabel, body);
+}
+function hwFormatTime(isoStr){
+  var dt = new Date(isoStr);
+  if(isNaN(dt.getTime())) return '–';
+  var hh = dt.getHours().toString().padStart(2, '0');
+  var mm = dt.getMinutes().toString().padStart(2, '0');
+  return hh + ':' + mm + ' Uhr';
 }
 
 /* ---------- Farbenfrohe Detail-Kacheln (gefühlte Temperatur, Luftfeuchtigkeit, Wind, Luftdruck, Sonne, Sicht, Schnee) ---------- */
@@ -374,45 +443,62 @@ function hwRenderDetailTiles(weatherData){
   var tiles = [];
 
   if(c.apparent_temperature != null){
-    tiles.push({ cls:'hw-stat-temp', icon:'🌡️', value: Math.round(c.apparent_temperature) + '°C', label:'Gefühlt' });
+    tiles.push({ cls:'hw-stat-temp', icon:'🌡️', value: Math.round(c.apparent_temperature) + '°C', label:'Gefühlt',
+      desc:'Berücksichtigt neben der Lufttemperatur auch Wind und Luftfeuchtigkeit – also wie warm oder kalt sich das Wetter tatsächlich anfühlt.' });
   }
   if(c.relative_humidity_2m != null){
-    tiles.push({ cls:'hw-stat-humid', icon:'💧', value: c.relative_humidity_2m + ' %', label:'Luftfeuchtigkeit' });
+    tiles.push({ cls:'hw-stat-humid', icon:'💧', value: c.relative_humidity_2m + ' %', label:'Luftfeuchtigkeit',
+      desc:'Der Anteil an Wasserdampf in der Luft, angegeben relativ zur maximal möglichen Menge bei der aktuellen Temperatur.' });
   }
   if(c.dew_point_2m != null){
-    tiles.push({ cls:'hw-stat-dew', icon:'🌫️', value: Math.round(c.dew_point_2m) + '°C', label:'Taupunkt' });
+    tiles.push({ cls:'hw-stat-dew', icon:'🌫️', value: Math.round(c.dew_point_2m) + '°C', label:'Taupunkt',
+      desc:'Die Temperatur, auf die die Luft abkühlen müsste, damit sich Wasserdampf als Tau niederschlägt. Ab etwa 16–18 °C wird die Luft meist als schwül empfunden.' });
   }
   if(c.pressure_msl != null){
     var trend = hwPressureTrend(weatherData);
-    tiles.push({ cls:'hw-stat-pressure', icon:'📊', value: Math.round(c.pressure_msl) + ' hPa', label: 'Luftdruck' + (trend ? ' ' + trend.icon + ' ' + trend.trend : '') });
+    tiles.push({ cls:'hw-stat-pressure', icon:'📊', value: Math.round(c.pressure_msl) + ' hPa', label: 'Luftdruck' + (trend ? ' ' + trend.icon + ' ' + trend.trend : ''),
+      desc:'Der Luftdruck auf Meereshöhe. Ein fallender Trend deutet häufig auf eine Wetterverschlechterung hin, ein steigender auf eine Besserung.' });
   }
   if(c.wind_gusts_10m != null){
-    tiles.push({ cls:'hw-stat-wind', icon:'💨', value: Math.round(c.wind_gusts_10m) + ' km/h', label:'Windböen' });
+    tiles.push({ cls:'hw-stat-wind', icon:'💨', value: Math.round(c.wind_gusts_10m) + ' km/h', label:'Windböen',
+      desc:'Die höchste erwartete kurzzeitige Windgeschwindigkeit – meist deutlich stärker als der mittlere, anhaltende Wind.' });
   }
   if(c.wind_direction_10m != null){
     var arrowHtml = '<span class="hw-wind-arrow" style="display:inline-block;transform:rotate(' + c.wind_direction_10m + 'deg);">↑</span>';
-    tiles.push({ cls:'hw-stat-wind', icon: arrowHtml, value: hwCompassDirection(c.wind_direction_10m), label:'Windrichtung' });
+    tiles.push({ cls:'hw-stat-wind', icon: arrowHtml, value: hwCompassDirection(c.wind_direction_10m), label:'Windrichtung',
+      desc:'Die Richtung, aus der der Wind weht, als Kompassrichtung (' + c.wind_direction_10m + '°).' });
   }
   if(c.visibility != null){
-    tiles.push({ cls:'hw-stat-visibility', icon:'👁️', value: (c.visibility/1000).toFixed(1) + ' km', label:'Sichtweite' });
+    tiles.push({ cls:'hw-stat-visibility', icon:'👁️', value: (c.visibility/1000).toFixed(1) + ' km', label:'Sichtweite',
+      desc:'Die Entfernung, bis zu der Objekte bei den aktuellen Wetterbedingungen (z. B. Nebel, Regen) noch erkennbar sind.' });
   }
   if(c.shortwave_radiation != null){
-    tiles.push({ cls:'hw-stat-sun', icon:'☀️', value: Math.round(c.shortwave_radiation) + ' W/m²', label:'Sonneneinstrahlung' });
+    tiles.push({ cls:'hw-stat-sun', icon:'☀️', value: Math.round(c.shortwave_radiation) + ' W/m²', label:'Sonneneinstrahlung',
+      desc:'Die aktuelle Strahlungsleistung der Sonne pro Quadratmeter, die auf den Boden trifft.' });
   }
   if(d && d.sunshine_duration && d.sunshine_duration[0] != null){
-    tiles.push({ cls:'hw-stat-sun', icon:'🌞', value: hwFormatDuration(d.sunshine_duration[0]), label:'Sonnenschein heute' });
+    tiles.push({ cls:'hw-stat-sun', icon:'🌞', value: hwFormatDuration(d.sunshine_duration[0]), label:'Sonnenschein heute',
+      desc:'Die für heute berechnete Gesamtdauer an direktem Sonnenschein (ohne Wolkenbedeckung).' });
   }
   if(d && d.snowfall_sum && d.snowfall_sum[0] > 0){
-    tiles.push({ cls:'hw-stat-snow', icon:'❄️', value: d.snowfall_sum[0] + ' cm', label:'Schneefall heute' });
+    tiles.push({ cls:'hw-stat-snow', icon:'❄️', value: d.snowfall_sum[0] + ' cm', label:'Schneefall heute',
+      desc:'Die für heute berechnete Neuschneemenge.' });
   }
 
   el.innerHTML = tiles.map(function(t, i){
-    return '<div class="hw-stat-tile ' + t.cls + '" style="animation-delay:' + (i*0.04) + 's;">' +
+    return '<button type="button" class="hw-stat-tile ' + t.cls + '" style="animation-delay:' + (i*0.04) + 's;" data-tile-idx="' + i + '">' +
       '<span class="hw-stat-icon">' + t.icon + '</span>' +
       '<div class="hw-stat-value">' + t.value + '</div>' +
       '<div class="hw-stat-label">' + t.label + '</div>' +
-    '</div>';
+    '</button>';
   }).join('');
+
+  el.querySelectorAll('.hw-stat-tile').forEach(function(btn){
+    var t = tiles[parseInt(btn.getAttribute('data-tile-idx'), 10)];
+    btn.onclick = function(){
+      hwOpenSheet(t.label, '<p style="font-size:22px;font-weight:700;margin:0 0 8px;">' + t.value + '</p><p style="color:var(--text-secondary);margin:0;">' + t.desc + '</p>');
+    };
+  });
 }
 
 /* ---------- Zahlen-Hochzähl-Animation ---------- */
@@ -554,14 +640,14 @@ function hwRenderSkyHero(containerId, code, isDay, tempValue, descText){
     for(var r=0;r<14;r++){
       drops += '<span class="hw-raindrop" style="left:' + ((r*7+3)%100) + '%;animation-delay:' + (r*0.13) + 's;"></span>';
     }
-    html += '<div class="hw-sky-rain">' + drops + '</div>';
+    html += '<div class="hw-sky-rain-layer">' + drops + '</div>';
   }
   if(cond === 'snow'){
     var flakes = '';
     for(var f=0;f<12;f++){
       flakes += '<span class="hw-snowflake" style="left:' + ((f*8+4)%100) + '%;animation-delay:' + (f*0.4) + 's;"></span>';
     }
-    html += '<div class="hw-sky-snow">' + flakes + '</div>';
+    html += '<div class="hw-sky-snow-layer">' + flakes + '</div>';
   }
   if(cond === 'storm'){
     html += '<div class="hw-sky-flash"></div>';
