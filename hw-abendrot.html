@@ -66,14 +66,15 @@ function hwLoadAbendrot(){
   }).then(function(data){
     var sunsetStr = data.daily.sunset[0];
     var sunriseStr = data.daily.sunrise[0];
+    var offset = data.utc_offset_seconds;
     var sunset = new Date(sunsetStr);
-    hwSunsetTs = sunset.getTime();
-    hwRenderSunArc('hw-sun-arc', sunriseStr, sunsetStr);
+    hwSunsetTs = hwRealTimeMs(sunsetStr, offset);
+    hwRenderSunArc('hw-sun-arc', sunriseStr, sunsetStr, offset);
 
     var hourlyTimes = data.hourly.time;
     var idx = 0, best = Infinity;
     for(var i=0;i<hourlyTimes.length;i++){
-      var diff = Math.abs(new Date(hourlyTimes[i]).getTime() - hwSunsetTs);
+      var diff = Math.abs(hwRealTimeMs(hourlyTimes[i], offset) - hwSunsetTs);
       if(diff < best){ best = diff; idx = i; }
     }
     var low = data.hourly.cloud_cover_low[idx];

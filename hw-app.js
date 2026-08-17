@@ -283,6 +283,18 @@ function hwWeatherCodeText(code){
   return map[code] || 'Unbekannt';
 }
 
+/* ---------- Zeitzonen-korrekte Umrechnung von Open-Meteo-Zeit-Strings ---------- */
+/* Open-Meteo liefert Zeit-Strings ohne Zeitzonen-Kennung – sie stellen die lokale Uhrzeit AM ORT dar,
+   nicht am Gerätestandort. new Date(str) interpretiert sie fälschlich als Uhrzeit in der Zeitzone des
+   Geräts. Das ist unproblematisch für die reine Anzeige (Ziffern bleiben korrekt), führt aber bei
+   allen "wie lange noch bis…"-Berechnungen zu einem Fehler in Höhe der Zeitzonendifferenz zwischen
+   Gerät und gewähltem Ort. Diese Funktion errechnet den tatsächlichen Zeitpunkt (echte UTC-ms) mithilfe
+   des von Open-Meteo mitgelieferten utc_offset_seconds-Werts des jeweiligen Orts. */
+function hwRealTimeMs(isoStr, utcOffsetSeconds){
+  if(utcOffsetSeconds == null) return new Date(isoStr).getTime();
+  return Date.parse(isoStr + 'Z') - utcOffsetSeconds * 1000;
+}
+
 /* ---------- Regenwahrscheinlichkeit stundenweise (grafische Balkendarstellung) ---------- */
 /* Baut aus den bereits geladenen hourly-Daten die Werte der nächsten Stunden.
    hours: wie viele Folgestunden zusätzlich zur aktuellen Stunde angezeigt werden (Standard 5). */
@@ -291,8 +303,9 @@ function hwHourlyPrecipData(data, hours){
   var times = data.hourly && data.hourly.time;
   var precip = data.hourly && data.hourly.precipitation_probability;
   if(!times || !precip) return null;
-  var now = new Date();
-  var idx0 = times.findIndex(function(t){ return new Date(t) >= now; });
+  var offset = data.utc_offset_seconds;
+  var now = Date.now();
+  var idx0 = times.findIndex(function(t){ return hwRealTimeMs(t, offset) >= now; });
   if(idx0 < 0) idx0 = 0;
   var items = [];
   for(var i = idx0; i <= idx0 + hours && i < times.length; i++){
@@ -334,8 +347,9 @@ function hwPressureTrend(data){
   var times = data.hourly && data.hourly.time;
   var pressure = data.hourly && data.hourly.pressure_msl;
   if(!times || !pressure) return null;
-  var now = new Date();
-  var idx0 = times.findIndex(function(t){ return new Date(t) >= now; });
+  var offset = data.utc_offset_seconds;
+  var now = Date.now();
+  var idx0 = times.findIndex(function(t){ return hwRealTimeMs(t, offset) >= now; });
   if(idx0 < 0) idx0 = 0;
   var idxPast = Math.max(0, idx0 - 3);
   if(idxPast === idx0) return null;
@@ -549,10 +563,10 @@ function hwRenderRing(containerId, value, max, colorVar, label, centerText){
 }
 
 /* ---------- Sonnenstand-Bogen (Sonnenaufgang bis Sonnenuntergang) ---------- */
-function hwRenderSunArc(containerId, sunriseISO, sunsetISO){
+function hwRenderSunArc(containerId, sunriseISO, sunsetISO, utcOffsetSeconds){
   var el = document.getElementById(containerId);
   if(!el) return;
-  var sunrise = new Date(sunriseISO).getTime(), sunset = new Date(sunsetISO).getTime();
+  var sunrise = hwRealTimeMs(sunriseISO, utcOffsetSeconds), sunset = hwRealTimeMs(sunsetISO, utcOffsetSeconds);
   var now = Date.now();
   var frac = (now - sunrise) / (sunset - sunrise);
   frac = Math.max(0, Math.min(1, frac));
@@ -579,8 +593,9 @@ function hwRenderHourlyStrip(containerId, weatherData, hours){
   var codes = weatherData.hourly && weatherData.hourly.weather_code;
   var isDayArr = weatherData.hourly && weatherData.hourly.is_day;
   if(!times || !temps || !codes){ el.innerHTML = ''; return; }
-  var now = new Date();
-  var idx0 = times.findIndex(function(t){ return new Date(t) >= now; });
+  var offset = weatherData.utc_offset_seconds;
+  var now = Date.now();
+  var idx0 = times.findIndex(function(t){ return hwRealTimeMs(t, offset) >= now; });
   if(idx0 < 0) idx0 = 0;
   var items = [];
   for(var i = idx0; i < idx0 + hours && i < times.length; i++){
