@@ -1,4 +1,4 @@
-const HW_CACHE = 'himmelswahr-v15';
+const HW_CACHE = 'himmelswahr-v16';
 const HW_FILES = [
   'index.html',
   'hw-index.html',
