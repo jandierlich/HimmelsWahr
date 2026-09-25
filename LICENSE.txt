@@ -1,0 +1,34 @@
+HimmelsWahr — Lizenzübersicht (Version 46)
+
+Eigener Code (HTML/CSS/JavaScript, Icons, Grafiken):
+Copyright Jan Dierlich. Alle Rechte vorbehalten, private Nutzung/Weitergabe an Freunde und Kollegen ausdrücklich erlaubt.
+
+Verwendete externe Bibliotheken: KEINE.
+HimmelsWahr nutzt bewusst keine externen JavaScript-Bibliotheken, keine CDN-Ressourcen und keine Web-Fonts (nur Systemschriften). Es kommen ausschließlich native Browser-Schnittstellen zum Einsatz (Standort via Geolocation API, Kamera via MediaDevices API, Kompass-/Neigungssensor via DeviceOrientation API, localStorage, Service Worker, Notification API). Dadurch entfallen Lizenzfragen zu Drittkomponenten vollständig.
+
+Externe Datenquellen zur Laufzeit:
+- Open-Meteo.com — Wetter, 15-Minuten-Niederschlag, Wolkenschichten, Sonnenauf-/-untergang (Forecast API)
+- Open-Meteo.com — Luftqualität und Pollen (separate Air-Quality-API, Modellbasis CAMS/Copernicus)
+- Open-Meteo.com — Ortssuche für die manuelle Standortauswahl (separate Geocoding-API, GeoNames-Datenbasis)
+  Lizenz der Daten (alle drei APIs): Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://open-meteo.com/en/license · https://creativecommons.org/licenses/by/4.0/
+  Änderungen: Werte werden umgerechnet, gerundet, ausgewählt und für eigene Schätzungen weiterverarbeitet (angegeben auf Lizenzseite und an Anzeigestellen).
+  Nutzung: nicht-kommerziell, kostenlos, Attributionslink an jeder Anzeigestelle vorhanden.
+  Es wird ausschließlich die öffentliche, unauthentifizierte API verwendet (kein API-Key, kein kostenpflichtiger Plan).
+- GeoNames (https://www.geonames.org/) — Ortsdaten der Ortssuche, CC BY 4.0, Nennung in der Ortsauswahl und auf der Lizenzseite.
+- Copernicus Atmosphere Monitoring Service (CAMS) — Hinweis gemäß Copernicus-Lizenz auf den Luft-/Pollen-Anzeigen:
+  "Enthält modifizierte Copernicus Atmosphere Monitoring Service-Informationen 2026." Weder die Europäische Kommission noch das ECMWF sind für die Verwendung der enthaltenen Informationen verantwortlich.
+
+Lokal berechnete Daten (keine externe Abfrage):
+- Sonne, Mond, Mondphasen, Dämmerungszeiten, Jahreszeiten: Standardformeln der Astronomie (Näherungen).
+- Planeten: mittlere Bahnelemente der NASA/JPL-Tabelle "Keplerian Elements for Approximate Positions of the Major Planets" (1800-2050); Zahlenwerte der NASA/JPL.
+- Sternkoordinaten (J2000, per Präzession auf das Datum gebracht) und Tabelle der Sternschnuppen-Maxima: allgemein bekannte astronomische Tatsachen, selbst zusammengestellt; kein geschützter Katalog oder Kalender kopiert.
+- Abendrot-/Morgenrot-Schätzung, Nachthimmel-Bewertung, Draußen-Score: eigene Faustformeln, nicht wissenschaftlich validiert.
+
+Bewusst NICHT eingebunden / entfernt:
+- Regenradar-Karte (Leaflet, RainViewer, OpenStreetMap-Kacheln): Auf Wunsch entfernt. Grund: Anders als bei Open-Meteo (CC BY 4.0) gibt es bei RainViewer und OpenStreetMap keine förmliche, dauerhaft zugesicherte Einzellizenz für diese Nutzung, nur allgemeine, änderbare Nutzungsrichtlinien.
+- Himmel-Live-Scan (Kamerafunktion zur automatischen Himmel-Einschätzung): Auf Wunsch entfernt. Die Kamera wird nur für den Himmels-Kompass als Live-Bildhintergrund genutzt, ohne Bildauswertung, Speicherung oder Übertragung.
+- OpenSky Network API (Live-Flugdaten): Die Nutzungsbedingungen verlangen für den Betrieb der REST-API in einem laufenden Produkt/Dienst eine vorherige schriftliche Lizenz.
+- Amtliche DWD-Wetterwarnungen: Auf Wunsch entfernt.
+- Bundesamt für Strahlenschutz (BfS) — Gamma-Ortsdosisleistung: Auf Wunsch entfernt; Lizenz des Datensatzes nicht abschließend bestätigt.
+- NOAA/SWPC-Polarlicht-Daten und weitere Fremdquellen: für diese Version bewusst nicht eingebunden, um die Zahl externer Anbieter klein zu halten.

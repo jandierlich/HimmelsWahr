@@ -1,0 +1,16 @@
+{
+  "name": "HimmelsWahr",
+  "short_name": "HimmelsWahr",
+  "description": "Wetter, Regen, Luft, Abendrot, Nachthimmel und Himmels-Kompass für deinen Standort.",
+  "lang": "de",
+  "start_url": "hw-index.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#4A7FBE",
+  "theme_color": "#4A7FBE",
+  "orientation": "any",
+  "icons": [
+    { "src": "hw-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "hw-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

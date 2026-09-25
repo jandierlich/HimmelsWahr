@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#4A7FBE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HimmelsWahr">
+<title>Quellen & Lizenzen – HimmelsWahr</title>
+<link rel="manifest" href="hw-manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="hw-icon-180.png?v=3">
+<link rel="icon" href="hw-icon-192.png" type="image/png">
+<link rel="stylesheet" href="hw-style.css">
+</head>
+<body>
+<div class="hw-wrap hw-legal">
+  <div class="hw-header"><h1>Quellen &amp; Lizenzen</h1></div>
+  <div class="hw-card">
+    <h2>Eigener Code und Grafiken</h2>
+    <p>HTML, CSS, JavaScript, Symbole und Illustrationen sind eigene Arbeit von Jan Dierlich. Alle Rechte vorbehalten; private Nutzung und Weitergabe an Freunde und Kollegen sind ausdrücklich erlaubt.</p>
+    <h2>Bibliotheken, Schriften</h2>
+    <p>Es werden keine externen JavaScript-Bibliotheken, keine CDN-Ressourcen und keine Web-Fonts eingesetzt, nur Systemschriften und native Browser-Schnittstellen (Standort, Kamera, Bewegungssensoren, localStorage, Service Worker).</p>
+
+    <h2>Wetter-, Luft- und Ortsdaten</h2>
+    <p><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> – Wetter (inkl. 15-Minuten-Niederschlag und Wolkenschichten), Luftqualität und Pollen sowie Ortssuche. Lizenz der Daten: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative Commons Attribution 4.0 International (CC BY 4.0)</a>, siehe <a href="https://open-meteo.com/en/license" target="_blank" rel="noopener">open-meteo.com/en/license</a>. Änderungen: Die Werte wurden umgerechnet, gerundet, ausgewählt und für eigene Schätzungen (Draußen-Score, Abendrot, Nachthimmel, Regen-Kurzfrist) weiterverarbeitet.</p>
+    <p>Nutzung nicht-kommerziell und kostenlos über die öffentliche API ohne Schlüssel; an jeder Anzeigestelle steht ein Quellenhinweis mit Link.</p>
+    <p>Ortsdaten der Ortssuche: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0).</p>
+    <p>Luftqualität und Pollen: Enthält modifizierte Copernicus Atmosphere Monitoring Service-Informationen 2026. Weder die Europäische Kommission noch das ECMWF sind für die Verwendung der enthaltenen Informationen verantwortlich.</p>
+
+    <h2>Astronomische Berechnungen</h2>
+    <p>Positionen von Sonne, Mond, Planeten und Sternen sowie Mondphasen, Dämmerungszeiten und Jahreszeiten werden auf deinem Gerät berechnet. Grundlage sind Standardformeln der Astronomie. Für die Planeten dienen die mittleren Bahnelemente der NASA/JPL-Tabelle „Keplerian Elements for Approximate Positions of the Major Planets“ (Gültigkeit 1800–2050; Zahlenwerte der NASA/JPL). Sternkoordinaten und die Tabelle der Sternschnuppen-Maxima sind allgemein bekannte astronomische Tatsachen und wurden selbst zusammengestellt; es wurde kein geschützter Katalog oder Kalender kopiert. Die Ergebnisse sind Näherungen, keine Präzisions-Ephemeriden.</p>
+
+    <h2>Bewusst nicht eingebunden</h2>
+    <p>Regenradar-Karten (RainViewer, OpenStreetMap-Kacheln), OpenSky-Flugdaten, amtliche DWD-Wetterwarnungen und BfS-Strahlungsdaten sind nicht enthalten, weil für die jeweilige Nutzung keine eindeutig gesicherte Lizenz vorliegt bzw. dies so gewünscht wurde. Für Sicherheitsentscheidungen gelten ausschließlich die amtlichen Warnungen des Deutschen Wetterdienstes.</p>
+    <p>Die vollständige Übersicht liegt zusätzlich als Datei <a href="LICENSE.txt">LICENSE.txt</a> bei.</p>
+  </div>
+  <a class="hw-btn" href="hw-index.html">Zur Startseite</a>
+</div>
+
+<script src="hw-astro.js"></script>
+<script src="hw-app.js"></script>
+<script src="hw-sky.js"></script>
+<script>
+hwRenderNav('');
+</script>
+</body>
+</html>
