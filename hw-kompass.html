@@ -90,7 +90,7 @@ function hwRenderNowList(){
 }
 
 /* ---------- Kamera-Ansicht ---------- */
-var AR = { on: false, stream: null, raf: 0, raw: null, absSeen: false, sm: null, objs: [], lastCalc: 0, lat: 51, lon: 10, cal: { yaw: 0, fov: 68 }, lines: null, byName: {}, lastInfo: '' };
+var AR = { on: false, stream: null, raf: 0, raw: null, absSeen: false, smQ: null, curHeading: 0, curPitch: 0, objs: [], lastCalc: 0, lat: 51, lon: 10, cal: { yaw: 0, fov: 68 }, lines: null, byName: {}, lastInfo: '' };
 try{ var c0 = JSON.parse(localStorage.getItem('hw-kompass-cal')); if(c0 && typeof c0.yaw === 'number' && typeof c0.fov === 'number') AR.cal = c0; }catch(e){}
 function arSaveCal(){ try{ localStorage.setItem('hw-kompass-cal', JSON.stringify(AR.cal)); }catch(e){} }
 function arErr(msg){ var el = document.getElementById('hwk-error'); el.textContent = msg; el.style.display = 'block'; }
@@ -105,30 +105,72 @@ function arOnOri(e){
   if(AR.absSeen) return;
   arStoreOri(e, e.absolute === true);
 }
-/* Kamerarichtung (Kompasskurs h, Neigung p, Rollen r) aus den Sensorwinkeln, unabhängig von der Bildschirmdrehung */
+/* ---------- Quaternion-Hilfsfunktionen ---------- */
+function hwQuatFromAngles(alphaDeg, betaDeg, gammaDeg){
+  var _z = hwDeg2rad(alphaDeg || 0), _x = hwDeg2rad(betaDeg || 0), _y = hwDeg2rad(gammaDeg || 0);
+  var cX = Math.cos(_x / 2), cY = Math.cos(_y / 2), cZ = Math.cos(_z / 2);
+  var sX = Math.sin(_x / 2), sY = Math.sin(_y / 2), sZ = Math.sin(_z / 2);
+  return [
+    sX * cY * cZ - cX * sY * sZ,
+    cX * sY * cZ + sX * cY * sZ,
+    cX * cY * sZ + sX * sY * cZ,
+    cX * cY * cZ - sX * sY * sZ
+  ];
+}
+function hwQuatMul(a, b){
+  return [
+    a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+    a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+    a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+    a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]
+  ];
+}
+function hwQuatFromAxisAngle(axis, rad){
+  var s = Math.sin(rad / 2);
+  return [axis[0] * s, axis[1] * s, axis[2] * s, Math.cos(rad / 2)];
+}
+function hwQuatNormalize(q){
+  var n = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]) || 1;
+  return [q[0] / n, q[1] / n, q[2] / n, q[3] / n];
+}
+function hwQuatSlerp(a, b, t){
+  var ax = a[0], ay = a[1], az = a[2], aw = a[3], bx = b[0], by = b[1], bz = b[2], bw = b[3];
+  var dot = ax * bx + ay * by + az * bz + aw * bw;
+  if(dot < 0){ bx = -bx; by = -by; bz = -bz; bw = -bw; dot = -dot; }
+  if(dot > 0.9995) return hwQuatNormalize([ax + (bx - ax) * t, ay + (by - ay) * t, az + (bz - az) * t, aw + (bw - aw) * t]);
+  var theta0 = Math.acos(Math.min(1, dot)), theta = theta0 * t;
+  var sinTheta0 = Math.sin(theta0), sinTheta = Math.sin(theta);
+  var s0 = Math.cos(theta) - dot * sinTheta / sinTheta0, s1 = sinTheta / sinTheta0;
+  return [ax * s0 + bx * s1, ay * s0 + by * s1, az * s0 + bz * s1, aw * s0 + bw * s1];
+}
+function hwQuatRotate(q, v){
+  var qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+  var vx = v[0], vy = v[1], vz = v[2];
+  var tx = 2 * (qy * vz - qz * vy), ty = 2 * (qz * vx - qx * vz), tz = 2 * (qx * vy - qy * vx);
+  return [
+    vx + qw * tx + (qy * tz - qz * ty),
+    vy + qw * ty + (qz * tx - qx * tz),
+    vz + qw * tz + (qx * ty - qy * tx)
+  ];
+}
+
+/* Kamera-Orientierung als Quaternion aus den rohen Sensorwinkeln, statt getrennter Kompass-/Neigungs-/Roll-Winkel.
+   Das vermeidet den Gimbal-Lock der alten Euler-Formel: dort wurde der Kompasskurs genau dann numerisch instabil,
+   wenn die Kamera nahe am Zenit (senkrecht über Kopf) oder Nadir zeigte, und das Bild "kippte" plötzlich weg.
+   Ein Quaternion hat diese Polstelle nicht, die Drehung bleibt beim Überkopf-Schwenk durchgehend glatt. */
 function arAttitude(){
   var r = AR.raw;
   if(!r || r.beta == null) return null;
-  var a = hwDeg2rad(r.alpha || 0), b = hwDeg2rad(r.beta), g = hwDeg2rad(r.gamma || 0);
-  var ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cg = Math.cos(g), sg = Math.sin(g);
-  var fz = -cb * cg, p = Math.asin(Math.max(-1, Math.min(1, fz)));
-  var h;
-  if(r.webkit != null) h = r.webkit;
-  else { h = hwWrap360(hwRad2deg(Math.atan2(-(ca * sg + sa * sb * cg), -(sa * sg - ca * sb * cg)))); }
+  var alphaEff = (r.webkit != null) ? hwWrap360(360 - r.webkit) : (r.alpha || 0);
+  var dq = hwQuatFromAngles(alphaEff, r.beta, r.gamma || 0);
   var ang = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
   ang = ((ang % 360) + 360) % 360;
-  var Xz = -cb * sg, Yz = sb, rz, uz;
-  if(ang === 90){ rz = -Yz; uz = Xz; } else if(ang === 180){ rz = -Xz; uz = -Yz; } else if(ang === 270){ rz = Yz; uz = -Xz; } else { rz = Xz; uz = Yz; }
-  var cp = Math.cos(p), roll = 0;
-  if(cp > 0.08) roll = Math.atan2(rz / cp, uz / cp);
-  return { h: h, p: p, roll: roll, ok: r.ok };
+  var sq = hwQuatFromAxisAngle([0, 0, 1], hwDeg2rad(-ang));
+  return { q: hwQuatNormalize(hwQuatMul(dq, sq)), ok: r.ok };
 }
 function arSmooth(t){
-  if(!AR.sm){ AR.sm = { h: t.h, p: t.p, roll: t.roll }; return; }
-  var k = 0.22;
-  AR.sm.h = hwWrap360(AR.sm.h + hwWrap180(t.h - AR.sm.h) * k);
-  AR.sm.p += (t.p - AR.sm.p) * k;
-  AR.sm.roll += hwWrap180(hwRad2deg(t.roll - AR.sm.roll)) * Math.PI / 180 * k;
+  if(!AR.smQ){ AR.smQ = t.q; return; }
+  AR.smQ = hwQuatSlerp(AR.smQ, t.q, 0.22);
 }
 function arRecalc(){
   var now = Date.now();
@@ -160,12 +202,14 @@ function arDraw(){
   if(!att){ ctx.fillStyle = '#fff'; ctx.font = '600 15px -apple-system,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Warte auf Bewegungssensor …', W / 2, H / 2); return; }
   arSmooth(att);
   arRecalc();
-  var h = hwDeg2rad(hwWrap360(AR.sm.h + AR.cal.yaw)), p = AR.sm.p, ro = AR.sm.roll;
-  var fw = [Math.sin(h) * Math.cos(p), Math.cos(h) * Math.cos(p), Math.sin(p)];
-  var rl = [Math.cos(h), -Math.sin(h), 0], ul = [-Math.sin(h) * Math.sin(p), -Math.cos(h) * Math.sin(p), Math.cos(p)];
-  var cr = Math.cos(ro), sr = Math.sin(ro);
-  var rt = [rl[0] * cr + ul[0] * sr, rl[1] * cr + ul[1] * sr, rl[2] * cr + ul[2] * sr];
-  var up = [ul[0] * cr - rl[0] * sr, ul[1] * cr - rl[1] * sr, ul[2] * cr - rl[2] * sr];
+  var rawFw = hwQuatRotate(AR.smQ, [0, 0, -1]);
+  AR.curHeading = hwWrap360(hwRad2deg(Math.atan2(rawFw[0], rawFw[1])));
+  AR.curPitch = hwRad2deg(Math.asin(Math.max(-1, Math.min(1, rawFw[2]))));
+  var qCal = hwQuatFromAxisAngle([0, 0, 1], hwDeg2rad(-AR.cal.yaw));
+  var qView = hwQuatNormalize(hwQuatMul(qCal, AR.smQ));
+  var fw = hwQuatRotate(qView, [0, 0, -1]);
+  var rt = hwQuatRotate(qView, [1, 0, 0]);
+  var up = hwQuatRotate(qView, [0, 1, 0]);
   var video = document.getElementById('hwk-video');
   var vw = video.videoWidth || 0, vh = video.videoHeight || 0;
   if(vw && ((vw > vh) !== (W > H))){ var tt = vw; vw = vh; vh = tt; }
@@ -272,7 +316,7 @@ function arDraw(){
   ctx.beginPath(); ctx.arc(W / 2, H / 2, 14, 0, 6.283); ctx.moveTo(W / 2 - 22, H / 2); ctx.lineTo(W / 2 - 8, H / 2); ctx.moveTo(W / 2 + 8, H / 2); ctx.lineTo(W / 2 + 22, H / 2);
   ctx.moveTo(W / 2, H / 2 - 22); ctx.lineTo(W / 2, H / 2 - 8); ctx.moveTo(W / 2, H / 2 + 8); ctx.lineTo(W / 2, H / 2 + 22); ctx.stroke();
 
-  var hd = hwWrap360(AR.sm.h + AR.cal.yaw), pd = hwRad2deg(p);
+  var hd = hwWrap360(AR.curHeading + AR.cal.yaw), pd = AR.curPitch;
   var info = 'Blickrichtung ' + hwCompassWord(hd) + ' · ' + Math.round(hd) + '° · Neigung ' + Math.round(pd) + '°';
   var near = best && bestD < 60 ? '<strong>' + best.name + '</strong> – Höhe ' + Math.round(best.altitude) + '°, Richtung ' + hwCompassWord(best.azimuth) + ' (' + Math.round(best.azimuth) + '°)' : 'Nichts im Fadenkreuz';
   var html = near + '<small>' + info + (att.ok ? '' : ' · Kompass ungenau (Gerät ohne absoluten Nordbezug)') + '</small>';
@@ -296,10 +340,10 @@ function arOpenCal(){
   yaw.oninput = function(){ AR.cal.yaw = parseFloat(yaw.value); sync(); arSaveCal(); };
   fov.oninput = function(){ AR.cal.fov = parseFloat(fov.value); sync(); arSaveCal(); };
   function align(name){
-    if(!AR.sm) return;
+    if(!AR.smQ) return;
     var o = AR.byName[name];
     if(!o || o.altitude < 0){ alert(name + ' steht gerade unter dem Horizont.'); return; }
-    AR.cal.yaw = Math.max(-45, Math.min(45, hwWrap180(o.azimuth - AR.sm.h)));
+    AR.cal.yaw = Math.max(-45, Math.min(45, hwWrap180(o.azimuth - AR.curHeading)));
     sync(); arSaveCal();
   }
   document.getElementById('hwk-align-sun').onclick = function(){ align('Sonne'); };
@@ -317,7 +361,7 @@ function arStop(){
   var v = document.getElementById('hwk-video'); v.srcObject = null;
   document.getElementById('hw-ar').classList.remove('on');
   document.getElementById('hw-nav').style.display = '';
-  AR.sm = null; AR.raw = null; AR.absSeen = false; AR.calOpen = false;
+  AR.smQ = null; AR.raw = null; AR.absSeen = false; AR.calOpen = false;
 }
 function arStart(){
   document.getElementById('hwk-error').style.display = 'none';
